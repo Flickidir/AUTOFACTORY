@@ -11,7 +11,7 @@ state = {'status': 'starting', 'resolution': '540x960', 'seconds': 5}
 def render():
     start = time.monotonic()
     state['status'] = 'rendering'
-    vf = "drawbox=x='50+300*t/5':y=425:w=120:h=120:color=0x1976d2:t=fill,drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:text='AUTOFACTORY':fontcolor=black:fontsize=46:x=(w-text_w)/2:y=230,drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf:text='Cloud render test':fontcolor=black:fontsize=28:x=(w-text_w)/2:y=305"
+    vf = "drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf:text='■':fontcolor=0x1976d2:fontsize=120:x='50+60*t':y=425,drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:text='AUTOFACTORY':fontcolor=black:fontsize=46:x=(w-text_w)/2:y=230,drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf:text='Cloud render test':fontcolor=black:fontsize=28:x=(w-text_w)/2:y=305"
     cmd = ['ffmpeg','-hide_banner','-y','-f','lavfi','-i','color=c=white:s=540x960:r=24:d=5','-f','lavfi','-i','sine=frequency=440:sample_rate=44100:duration=5','-vf',vf,'-c:v','libx264','-preset','ultrafast','-pix_fmt','yuv420p','-c:a','aac','-b:a','96k','-shortest','-movflags','+faststart',str(video)]
     try:
         subprocess.run(cmd, capture_output=True, text=True, timeout=600, check=True)
