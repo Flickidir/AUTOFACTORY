@@ -12,7 +12,7 @@ def render():
     start = time.monotonic()
     state['status'] = 'rendering'
     vf = "drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf:text='■':fontcolor=0x1976d2:fontsize=120:x='50+20*t':y=425,drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:text='AUTOFACTORY':fontcolor=black:fontsize=46:x=(w-text_w)/2:y=230,drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf:text='Cloud render test':fontcolor=black:fontsize=28:x=(w-text_w)/2:y=305"
-    cmd = ['ffmpeg','-hide_banner','-y','-f','lavfi','-i','color=c=white:s=1080x1920:r=24:d=35','-f','lavfi','-i','sine=frequency=440:sample_rate=44100:duration=35','-vf',vf,'-c:v','libx264','-preset','ultrafast','-pix_fmt','yuv420p','-c:a','aac','-b:a','96k','-shortest','-movflags','+faststart',str(video)]
+    cmd = ['ffmpeg','-hide_banner','-y','-f','lavfi','-i','color=c=white:s=1080x1920:r=24:d=35','-f','lavfi','-i','sine=frequency=440:sample_rate=44100:duration=35','-vf',vf,'-c:v','libx264','-threads','1','-preset','ultrafast','-pix_fmt','yuv420p','-c:a','aac','-b:a','96k','-shortest','-movflags','+faststart',str(video)]
     try:
         subprocess.run(cmd, capture_output=True, text=True, timeout=600, check=True)
         probe = subprocess.run(['ffprobe','-v','error','-show_entries','format=duration,size:stream=codec_name,codec_type,width,height','-of','json',str(video)],capture_output=True,text=True,timeout=30,check=True)
@@ -21,6 +21,10 @@ def render():
         state.update(status='failed', error=str(exc), render_seconds=round(time.monotonic()-start,2))
 
 class Handler(BaseHTTPRequestHandler):
+    def do_HEAD(self):
+        self.send_response(200)
+        self.end_headers()
+
     def do_GET(self):
         path = self.path.split('?',1)[0]
         if path == '/video.mp4' and state['status'] == 'complete':
