@@ -1,0 +1,36 @@
+name: Software tests
+on: [push, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate syntax and narration segmentation
+        run: |
+          python -m py_compile providers/groq_voice.py app.py
+          python - <<'PY'
+          import os
+          from providers.groq_voice import split_text, synthesize
+          text = ('Aviation makes curious people ask questions. ' * 15).strip()
+          chunks = split_text(text)
+          assert ' '.join(chunks) == text
+          assert all(0 < len(part) <= 200 for part in chunks)
+          assert len(chunks) > 1
+          try:
+              split_text(' ')
+          except ValueError:
+              pass
+          else:
+              raise AssertionError('empty input accepted')
+          os.environ.pop('GROQ_API_KEY', None)
+          try:
+              synthesize('Hello', '/tmp/autofactory-unused')
+          except RuntimeError:
+              pass
+          else:
+              raise AssertionError('missing key was accepted')
+          print('Software checks passed; no API request made')
+          PY
