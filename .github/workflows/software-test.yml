@@ -10,7 +10,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Validate syntax and narration segmentation
         run: |
-          python -m py_compile providers/groq_voice.py app.py
+          python -m py_compile providers/groq_voice.py app.py voice_render.py
           python - <<'PY'
           import os
           from providers.groq_voice import split_text, synthesize
@@ -32,5 +32,13 @@ jobs:
               pass
           else:
               raise AssertionError('missing key was accepted')
+          from voice_render import run
+          try:
+              run('A ' * 150, '/tmp/autofactory-unused')
+          except ValueError:
+              pass
+          else:
+              raise AssertionError('oversized test accepted')
           print('Software checks passed; no API request made')
           PY
+
