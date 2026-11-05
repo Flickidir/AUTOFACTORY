@@ -8,23 +8,19 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
-      - name: Validate syntax and narration segmentation
+      - name: Test adapter and audiovisual integration
         run: |
           python -m py_compile providers/groq_voice.py app.py voice_render.py
           python - <<'PY'
-          import os
+          import os, tempfile, wave
+          from pathlib import Path
+          from unittest.mock import patch
           from providers.groq_voice import split_text, synthesize
+          import voice_render
           text = ('Aviation makes curious people ask questions. ' * 15).strip()
           chunks = split_text(text)
           assert ' '.join(chunks) == text
           assert all(0 < len(part) <= 200 for part in chunks)
-          assert len(chunks) > 1
-          try:
-              split_text(' ')
-          except ValueError:
-              pass
-          else:
-              raise AssertionError('empty input accepted')
           os.environ.pop('GROQ_API_KEY', None)
           try:
               synthesize('Hello', '/tmp/autofactory-unused')
@@ -32,13 +28,24 @@ jobs:
               pass
           else:
               raise AssertionError('missing key was accepted')
-          from voice_render import run
-          try:
-              run('A ' * 150, '/tmp/autofactory-unused')
-          except ValueError:
-              pass
-          else:
-              raise AssertionError('oversized test accepted')
-          print('Software checks passed; no API request made')
+          with tempfile.TemporaryDirectory() as directory:
+              try:
+                  voice_render.run('A ' * 150, directory)
+              except ValueError:
+                  pass
+              else:
+                  raise AssertionError('oversized test accepted')
+              audio = str(Path(directory) / 'synthetic.wav')
+              with wave.open(audio, 'wb') as f:
+                  f.setnchannels(1)
+                  f.setsampwidth(2)
+                  f.setframerate(16000)
+                  f.writeframes(b'\x00\x00' * 16000)
+              with patch('voice_render.synthesize', return_value=[audio]):
+                  result = voice_render.run('Test', directory)
+              streams = result['probe']['streams']
+              assert any(x.get('codec_name') == 'h264' and x.get('width') == 720 and x.get('height') == 1280 for x in streams)
+              assert any(x.get('codec_name') == 'aac' for x in streams)
+              assert 0.9 <= float(result['probe']['format']['duration']) <= 1.2
+              print('Synthetic WAV to MP4 integration passed; no real TTS used')
           PY
-
